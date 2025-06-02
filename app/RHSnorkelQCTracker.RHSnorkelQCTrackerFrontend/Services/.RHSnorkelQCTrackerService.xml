@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+    <edmx:Reference Uri="https://sap.github.io/odata-vocabularies/vocabularies/Common.xml">
+        <edmx:Include Alias="Common" Namespace="com.sap.vocabularies.Common.v1"/>
+    </edmx:Reference>
+    <edmx:Reference Uri="https://oasis-tcs.github.io/odata-vocabularies/vocabularies/Org.OData.Core.V1.xml">
+        <edmx:Include Alias="Core" Namespace="Org.OData.Core.V1"/>
+    </edmx:Reference>
+    <edmx:DataServices>
+        <Schema Namespace="RHSnorkelQCTrackerService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+            <Annotation Term="Core.Links">
+                <Collection>
+                    <Record>
+                        <PropertyValue Property="rel" String="author"/>
+                        <PropertyValue Property="href" String="https://cap.cloud.sap"/>
+                    </Record>
+                </Collection>
+            </Annotation>
+            <EntityContainer Name="EntityContainer">
+                <EntitySet Name="QC_HEADER" EntityType="RHSnorkelQCTrackerService.QC_HEADER">
+                    <NavigationPropertyBinding Path="qC_ITEMS" Target="QC_ITEM"/>
+                </EntitySet>
+                <EntitySet Name="QC_ITEM" EntityType="RHSnorkelQCTrackerService.QC_ITEM">
+                    <NavigationPropertyBinding Path="qC_HEADER" Target="QC_HEADER"/>
+                    <NavigationPropertyBinding Path="aTTACHMENTS" Target="ATTACHMENTS"/>
+                </EntitySet>
+                <EntitySet Name="ATTACHMENTS" EntityType="RHSnorkelQCTrackerService.ATTACHMENTS">
+                    <NavigationPropertyBinding Path="qC_ITEM" Target="QC_ITEM"/>
+                </EntitySet>
+            </EntityContainer>
+            <EntityType Name="QC_HEADER">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="SNORKEL_NO" Type="Edm.String" MaxLength="100" Nullable="false"/>
+                <Property Name="DATE_STARTED" Type="Edm.Date"/>
+                <Property Name="DATE_ENDED" Type="Edm.Date"/>
+                <NavigationProperty Name="qC_ITEMS" Type="Collection(RHSnorkelQCTrackerService.QC_ITEM)" Partner="qC_HEADER">
+                    <OnDelete Action="Cascade"/>
+                </NavigationProperty>
+            </EntityType>
+            <EntityType Name="QC_ITEM">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="HEADER_ID" Type="Edm.Guid"/>
+                <Property Name="SECTION_NO" Type="Edm.String" MaxLength="100"/>
+                <Property Name="WORK_ITEM_DESCRIPTION" Type="Edm.String" MaxLength="100"/>
+                <Property Name="DATE_INSPECTED" Type="Edm.Date"/>
+                <Property Name="INSPECTED_BY" Type="Edm.String" MaxLength="100"/>
+                <Property Name="METHOD" Type="Edm.String" MaxLength="100"/>
+                <Property Name="DECISION_TAKEN" Type="Edm.Boolean"/>
+                <Property Name="TOLERANCE" Type="Edm.String" MaxLength="100"/>
+                <Property Name="ACTUAL_VALUE" Type="Edm.String" MaxLength="100"/>
+                <Property Name="POSITION" Type="Edm.String" MaxLength="100"/>
+                <Property Name="COMMENTS" Type="Edm.String" MaxLength="100"/>
+                <Property Name="CORRECTIVE_ACTION" Type="Edm.String" MaxLength="100"/>
+                <NavigationProperty Name="qC_HEADER" Type="RHSnorkelQCTrackerService.QC_HEADER" Partner="qC_ITEMS">
+                    <ReferentialConstraint Property="qC_HEADER_ID" ReferencedProperty="ID"/>
+                </NavigationProperty>
+                <Property Name="qC_HEADER_ID" Type="Edm.Guid"/>
+                <NavigationProperty Name="aTTACHMENTS" Type="Collection(RHSnorkelQCTrackerService.ATTACHMENTS)" Partner="qC_ITEM">
+                    <OnDelete Action="Cascade"/>
+                </NavigationProperty>
+                <Property Name="WorkProcessStep" Type="Edm.String" MaxLength="100"/>
+                <Property Name="SubStep" Type="Edm.String" MaxLength="100"/>
+            </EntityType>
+            <EntityType Name="ATTACHMENTS">
+                <Key>
+                    <PropertyRef Name="ID"/>
+                </Key>
+                <Property Name="ID" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="ITEM_ID" Type="Edm.String" MaxLength="100"/>
+                <Property Name="FILE_URL" Type="Edm.String" MaxLength="100"/>
+                <Property Name="DESCRIPTION" Type="Edm.String" MaxLength="100"/>
+                <Property Name="newProperty" Type="Edm.String" MaxLength="100"/>
+                <NavigationProperty Name="qC_ITEM" Type="RHSnorkelQCTrackerService.QC_ITEM" Partner="aTTACHMENTS">
+                    <ReferentialConstraint Property="qC_ITEM_ID" ReferencedProperty="ID"/>
+                </NavigationProperty>
+                <Property Name="qC_ITEM_ID" Type="Edm.Guid"/>
+            </EntityType>
+            <Annotations Target="RHSnorkelQCTrackerService.QC_HEADER/ID">
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="RHSnorkelQCTrackerService.QC_ITEM/ID">
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+            <Annotations Target="RHSnorkelQCTrackerService.ATTACHMENTS/ID">
+                <Annotation Term="Core.ComputedDefaultValue" Bool="true"/>
+            </Annotations>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>

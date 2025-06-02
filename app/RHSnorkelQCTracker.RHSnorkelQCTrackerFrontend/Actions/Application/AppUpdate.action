@@ -1,0 +1,8 @@
+{
+    "_Type": "Action.Type.ApplicationUpdate",
+    "ActionResult": {
+        "_Name": "AppUpdate"
+    },
+    "OnFailure": "/RHSnorkelQCTrackerFrontend/Rules/Application/AppUpdateFailure.js",
+    "OnSuccess": "/RHSnorkelQCTrackerFrontend/Rules/Application/AppUpdateSuccess.js"
+}

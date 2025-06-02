@@ -1,0 +1,228 @@
+_schema-version: "3.1"
+ID: RHSnorkelQCTracker
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: RHSnorkelQCTracker-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: RHSnorkelQCTracker-service-uaa
+  - name: RHSnorkelQCTracker-service-db
+  - name: RHSnorkelQCTracker-db
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm
+    ignore:
+    - node_modules
+    - package-lock.json
+- name: RHSnorkelQCTracker-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: RHSnorkelQCTracker-service-uaa
+  - name: RHSnorkelQCTracker-service-db
+  - name: RHSnorkelQCTracker-service-destination
+  - name: RHSnorkelQCTracker-service-metadata
+  - name: RHSnorkelQCTracker-service-connectivity
+  - name: RHSnorkelQCTracker-service-logs
+  - name: RHSnorkelQCTracker-db
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    memory: 256MB
+  build-parameters:
+    builder: npm
+    ignore:
+    - node_modules
+    - package-lock.json
+- name: RHSnorkelQCTracker-aux-destinations
+  type: com.sap.application.content
+  requires:
+  - name: RHSnorkelQCTracker-service-uaa
+    parameters:
+      service-key:
+        name: RHSnorkelQCTracker-uaa-key
+  - name: srv-api
+  - name: RHSnorkelQCTracker-service-html5-apps-repo-host
+    parameters:
+      service-key:
+        name: RHSnorkelQCTracker-html5-apps-repo-host-key
+  - name: RHSnorkelQCTracker-service-destination
+    parameters:
+      content-target: true
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Authentication: OAuth2UserTokenExchange
+          Name: RHSnorkelQCTracker-service-uaa
+          ServiceInstanceName: RHSnorkelQCTracker-uaa
+          ServiceKeyName: RHSnorkelQCTracker-uaa-key
+          sap.cloud.service: lcap.RHSnorkelQCTracker
+        - Authentication: OAuth2UserTokenExchange
+          Name: RHSnorkelQCTracker-app-srv
+          TokenServiceInstanceName: RHSnorkelQCTracker-uaa
+          TokenServiceKeyName: RHSnorkelQCTracker-uaa-key
+          URL: ~{srv-api/srv-url}
+          sap.cloud.service: lcap.RHSnorkelQCTracker
+        - Name: RHSnorkelQCTracker-service-html5-apps-repo-host
+          ServiceInstanceName: RHSnorkelQCTracker-html5-apps-repo-host
+          ServiceKeyName: RHSnorkelQCTracker-html5-apps-repo-host-key
+          sap.cloud.service: lcap.RHSnorkelQCTracker
+        - AppgyverEnabled: true
+          Authentication: OAuth2UserTokenExchange
+          HTML5.DynamicDestination: true
+          MobileEnabled: true
+          Name: RHSnorkelQCTracker-RHSnorkelQCTrackerService
+          TokenServiceInstanceName: RHSnorkelQCTracker-uaa
+          TokenServiceKeyName: RHSnorkelQCTracker-uaa-key
+          URL: ~{srv-api/srv-url}/service/RHSnorkelQCTrackerService
+          WebIDEEnabled: true
+          sap.applicationdevelopment.actions.enabled: true
+          sap.build.usage: CAP
+          sap.cloud.service: lcap.RHSnorkelQCTracker
+          sap.processautomation.enabled: true
+        existing_destinations_policy: update
+  build-parameters:
+    no-source: true
+- name: RHSnorkelQCTracker-launchpad
+  type: html5
+  path: build/launchpad
+  build-parameters:
+    _artifactName: launchpad.zip
+    build-result: ../../build/dist
+    builder: custom
+    commands:
+    - npm install
+    - npx -p @ui5/cli@^3.0.0 ui5 build --dest dist --include-task=generateCachebusterInfo
+    - bash -c "cd dist && npx bestzip ../../../build/dist/launchpad.zip *"
+    - rm -rf dist
+    supported-platforms: []
+- name: RHSnorkelQCTracker-aux-ui-deployer
+  type: com.sap.application.content
+  path: build/ui-deployer
+  requires:
+  - name: RHSnorkelQCTracker-service-html5-apps-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - launchpad.zip
+      name: RHSnorkelQCTracker-launchpad
+      target-path: resources
+    - artifacts:
+      - project1.zip
+      name: project1
+      target-path: resources/
+- name: project1
+  type: html5
+  path: app/project1
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: RHSnorkelQCTracker-service-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      oauth2-configuration:
+        credential-types:
+        - binding-secret
+        - x509
+        redirect-uris:
+        - https://${subdomain}.launchpad.${default-domain}/login/*
+        - https://${subdomain}.${default-domain}/login/*
+      role-collections: []
+      tenant-mode: dedicated
+      xsappname: RHSnorkelQCTracker-${space}
+    path: xs-security.json
+    service: xsuaa
+    service-name: RHSnorkelQCTracker-uaa
+    service-plan: application
+- name: RHSnorkelQCTracker-service-db
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: hana
+    service-name: RHSnorkelQCTracker-db
+    service-plan: hdi-shared
+- name: RHSnorkelQCTracker-service-destination
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: RHSnorkelQCTracker-destination
+    service-plan: lite
+- name: RHSnorkelQCTracker-service-metadata
+  type: org.cloudfoundry.user-provided-service
+  parameters:
+    config:
+      default-domain: ${default-domain}
+    service: metadata
+    service-name: RHSnorkelQCTracker-metadata
+    service-plan: standard
+- name: RHSnorkelQCTracker-service-connectivity
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: connectivity
+    service-name: RHSnorkelQCTracker-connectivity
+    service-plan: lite
+- name: RHSnorkelQCTracker-service-logs
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: application-logs
+    service-name: RHSnorkelQCTracker-logs
+    service-plan: lite
+- name: RHSnorkelQCTracker-service-html5-apps-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: RHSnorkelQCTracker-html5-apps-repo-host
+    service-plan: app-host
+- name: RHSnorkelQCTracker-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+  subdomain: development-practice-u050ndji
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - rm -rf build/dist
+    - mkdir -p build/dist
+    - rm -rf build/ui-deployer
+    - mkdir -p build/ui-deployer
+  - builder: custom
+    commands:
+    - npm install --production
+    - bash -c "cds -v | grep 'cds-dk' || npm i --production --no-save @sap/cds-dk"
+    - bash -c "export PATH=$PATH:$(pwd)/node_modules/.bin"
+    - cds build --production
+  after-all:
+  - builder: custom
+    commands:
+    - npm install
